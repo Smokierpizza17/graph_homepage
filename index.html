@@ -19,10 +19,12 @@
 </head>
 <body>
 
+<!-- Background stars, drawn in js/stars.js. A canvas of its own, so turning the
+     stars doesn't repaint the graph -->
+<canvas id="stars"></canvas>
+
 <svg id="graph" width="100%" height="100%">
-  <!-- Background stars, generated in js/stars.js -->
-  <g id="stars"></g>
-  <!-- Pan and zoom move this group; the stars stay put behind it -->
+  <!-- Pan and zoom move this group -->
   <g id="viewport">
     <!-- Edges must be drawn before nodes so nodes render on top;
          edges marked `behind` go underneath the others -->

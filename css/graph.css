@@ -7,9 +7,14 @@
   cursor: grab;       /* the background pans */
 }
 
-/* Background stars, generated in stars.js */
-.star {
-  fill: var(--star);
+/* Background stars, drawn in stars.js: a full-screen canvas behind the graph */
+#stars {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* --- Edges --- */
@@ -34,8 +39,19 @@
    colour and can't be overridden by the style rules. */
 .node {
   fill: var(--node-color);
-  filter: drop-shadow(0 0 5px var(--node-color));
   transition: filter var(--hover-fade) ease; /* fade hover and drag in and out */
+}
+
+/* The resting glow is a gradient circle behind the node, added by render.js
+   (NODE_GLOW = 'gradient'); it mustn't catch the pointer meant for the node */
+.glow {
+  pointer-events: none;
+}
+
+/* NODE_GLOW = 'filter' in render.js: a drop-shadow on the node instead. Looks the
+   same but costs more, since every moving node's blur is redone every frame. */
+.glow-filter .node {
+  filter: drop-shadow(0 0 5px var(--node-color));
 }
 
 /* Only on devices that can really hover; on touchscreens :hover sticks after a tap */

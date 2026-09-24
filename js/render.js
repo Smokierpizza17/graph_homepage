@@ -20,6 +20,49 @@ const nodeElements = nodes.map(node => {
   return { node, g, circle };
 });
 
+// --- Node glow ---
+// 'gradient': a circle behind each node, filled with a radial gradient that fades
+//   out like a blur would. About as cheap to draw as the node itself.
+// 'filter': a CSS drop-shadow on the node (see .glow-filter in css/graph.css). The
+//   same look, but every moving node's blur is recomputed every frame.
+// Hover and drag glows are drop-shadow filters either way; only one node has them.
+const NODE_GLOW = 'gradient';
+
+const GLOW_BLUR = 5; // px, like drop-shadow(0 0 5px); the blur's standard deviation
+// Opacity of a blurred straight edge by distance outside it, in units of GLOW_BLUR
+// (the Gaussian tail, 1 - Φ(d)). Linear between stops, so they're close together.
+const GLOW_FALLOFF = [
+  [0, 0.5], [0.25, 0.401], [0.5, 0.309], [0.75, 0.227], [1, 0.159], [1.25, 0.106],
+  [1.5, 0.067], [1.75, 0.040], [2, 0.023], [2.5, 0.006], [3, 0],
+];
+
+// One gradient per node: a gradient's colour can't come from the element using it,
+// so each one gets its node's --node-color baked in
+function addGlow({ node, g }, i, defs) {
+  const radius = node.size * NODE_RADIUS;
+  const outer = radius + GLOW_FALLOFF.at(-1)[0] * GLOW_BLUR;
+  const color = getComputedStyle(g).getPropertyValue('--node-color').trim();
+  const gradient = svgElement('radialGradient', { id: `glow-${i}`, gradientUnits: 'userSpaceOnUse', cx: 0, cy: 0, r: outer });
+  for (const [x, edgeOpacity] of GLOW_FALLOFF) {
+    const distance = x * GLOW_BLUR;
+    const offset = (radius + distance) / outer;
+    // A round node's glow thins out faster than a straight edge's, as it spreads
+    // over a growing circumference
+    const opacity = edgeOpacity * Math.sqrt(radius / (radius + distance));
+    gradient.appendChild(svgElement('stop', { offset, 'stop-color': color, 'stop-opacity': opacity }));
+  }
+  defs.appendChild(gradient);
+  g.prepend(svgElement('circle', { r: outer, fill: `url(#glow-${i})` }, 'glow'));
+}
+
+if (NODE_GLOW === 'gradient') {
+  const defs = svgElement('defs');
+  svg.prepend(defs);
+  nodeElements.forEach((nodeElement, i) => addGlow(nodeElement, i, defs));
+} else {
+  svg.classList.add('glow-filter');
+}
+
 // --- Edges: a <path>, so they can be straight or curved ---
 // The edge's style becomes an `edge-<name>` class, like node styles.
 const edgeElements = edges.map(edge => {

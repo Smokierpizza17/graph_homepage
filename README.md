@@ -149,6 +149,7 @@ To change the defaults or ranges permanently, edit `settingsConfig` in `js/setti
 - **Colours:** every colour on the page is a variable in `css/theme.css`, including the background gradient, stars, labels, the edge strain colours (`--edge-rest`, `--edge-compressed`, `--edge-stretched`) and the settings panel.
 - **Stars:** the number and parallax of the background stars are constants at the top of `js/stars.js`.
 - **Node size and label position:** `NODE_RADIUS` and `LABEL_OFFSET` at the top of `js/render.js`.
+- **Node glow:** `NODE_GLOW` in `js/render.js`. The default, `'gradient'`, is cheap to draw; `'filter'` uses a CSS `drop-shadow` instead, which costs more because every moving node's blur is redone each frame.
 - **Zoom limits:** `MIN_ZOOM` and `MAX_ZOOM` in `js/view.js`.
 
 ## Project layout
@@ -176,3 +177,5 @@ js/
 ```
 
 The scripts are plain `<script>` tags rather than ES modules, so that the page also works from `file://`. They share one global scope, and each script uses only what the scripts before it define. Keep that order in `index.html` when adding a new file.
+
+A large chunk of the code was primarily written by Claude Code.

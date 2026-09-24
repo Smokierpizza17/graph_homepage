@@ -12,6 +12,7 @@ const settingsConfig = {
   linkLength:   { label: 'Link length',   value: 100,   min: 10, max: 400,   step: 5 },
   damping:      { label: 'Damping',       value: 0.25,  min: 0.01,  max: 1,     step: 0.01 },
   speed:        { label: 'Speed',         value: 50,    min: 1,  max: 100,   step: 1 },
+  temperature:  { label: 'Temperature',   value: 0.05,    min: 0,  max: 20, step: 0.05},
 };
 
 // Current values, read by the simulation. Updated by the sliders.
@@ -187,12 +188,23 @@ window.addEventListener('mouseup', () => {
   dragTarget = null;
 });
 
+// Standard normal sample (mean 0, std 1)
+function randn() {
+  const u = 1 - Math.random(); // (0, 1], avoids log(0)
+  const v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
 
 function applyForces(nodes, edges, dt) {
   for (const node of nodes) {
     // dampening (F~v)
     node.vx += - settings.damping * node.vx * dt;
     node.vy += - settings.damping * node.vy * dt;
+
+    // temperature (Langevin thermostat)
+    const kick = Math.sqrt(2 * settings.damping * settings.temperature * dt);
+    node.vx += kick * randn();
+    node.vy += kick * randn();
 
     // centering force (F~r)
     node.vx += - settings.centering * node.x * dt;

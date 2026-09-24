@@ -19,18 +19,30 @@ html, body {
 /* Nodes */
 .node {
   fill: #4a90d9;
-  stroke-width: 1;
   cursor: pointer;
 }
 
+/* Hover and drag use filters rather than fill, so they work on any style's
+   colour and can't be overridden by the style rules below. */
 .node:hover {
-  fill: #6fb1f0;
+  filter: brightness(1.3);
 }
 
 .node.dragging {
-  fill: #f0a84a;
+  filter: brightness(1.6);
+  stroke: #ffffff;
+  stroke-width: 2;
   cursor: grabbing;
 }
+
+/* Node styles: a node with `style: 'foo'` in data/nodes.js gets class `style-foo`
+   on its group, so rules can target `.style-foo .node` and `.style-foo .label`. */
+.style-hub .node   { fill: #d9a04a; }
+.style-hub .label  { font-weight: bold; }
+
+.style-dev .node   { fill: #5bb36a; }
+
+.style-media .node { fill: #c0504d; }
 
 /* Settings panel */
 #settings {

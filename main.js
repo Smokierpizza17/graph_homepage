@@ -7,12 +7,12 @@ const NS = 'http://www.w3.org/2000/svg';
 // Each setting defines its default value and the range of its slider.
 const settingsConfig = {
   centering:    { label: 'Centering',     value: 0.003, min: 0.0005,  max: 0.02,  step: 0.0005 },
-  repulsion:    { label: 'Repulsion',     value: 10000, min: 500,  max: 50000, step: 500 },
+  repulsion:    { label: 'Repulsion',     value: 10000, min: 0,  max: 50000, step: 500 },
   linkStrength: { label: 'Link strength', value: 0.05,  min: 0.002,  max: 0.3,   step: 0.002 },
   linkLength:   { label: 'Link length',   value: 100,   min: 10, max: 400,   step: 5 },
   damping:      { label: 'Damping',       value: 0.25,  min: 0.01,  max: 1,     step: 0.01 },
   speed:        { label: 'Speed',         value: 50,    min: 1,  max: 100,   step: 1 },
-  temperature:  { label: 'Temperature',   value: 0.05,    min: 0,  max: 20, step: 0.05},
+  temperature:  { label: 'Temperature',   value: 0,    min: 0,  max: 20, step: 0.05},
 };
 
 // Current values, read by the simulation. Updated by the sliders.
@@ -59,25 +59,25 @@ function updateViewBox() {
 updateViewBox();
 window.addEventListener('resize', updateViewBox);
 
-// --- Sample data. Replace with real content later. ---
-const nodes = [
-  { id: 'a', label: 'Node A', x: -100, y:  -100, vx: -70, vy: 70  },
-  { id: 'b', label: 'Node B', x:   50, y: -125, vx: -50, vy: 0   },
-  { id: 'c', label: 'Node C', x:    0, y:   75, vx: 0, vy: 0     },
-  { id: 'd', label: 'Node D', x:  200, y:   25, vx: 50, vy: -200 },
-  { id: 'e', label: 'Node E', x: -250, y:  125, vx: -100, vy: 0  },
-];
-
-const edges = [
-  { source: 'a', target: 'b' },
-  { source: 'a', target: 'c' },
-  { source: 'b', target: 'd' },
-  { source: 'c', target: 'd' },
-  { source: 'c', target: 'e' },
-];
+// --- Graph data, loaded from data/nodes.js and data/edges.js ---
+// Nodes start scattered around the centre; the simulation spreads them out.
+const nodes = NODES.map(({ id, name, link, style }) => ({
+  id, name, link, style,
+  x: (Math.random() - 0.5) * 200,
+  y: (Math.random() - 0.5) * 200,
+  vx: 0,
+  vy: 0,
+}));
 
 // --- Build a lookup so edges can find node positions by id ---
 const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
+
+// Skip edges that reference a missing id instead of crashing the render loop
+const edges = EDGES.filter(edge => {
+  const ok = edge.source in nodeById && edge.target in nodeById;
+  if (!ok) console.warn('Skipping edge with unknown node id:', edge);
+  return ok;
+});
 
 // --- Render edges as <line> elements ---
 const edgeElements = edges.map(edge => {
@@ -87,9 +87,13 @@ const edgeElements = edges.map(edge => {
   return { edge, el: line };
 });
 
-// --- Render nodes as <circle> + <text> pairs, grouped in <g> ---
+// --- Render nodes as <circle> + <text> pairs, grouped in an <a> link ---
+// The node's style becomes a `style-<name>` class on the group, so CSS can
+// target both the circle and its label.
 const nodeElements = nodes.map(node => {
-  const g = document.createElementNS(NS, 'g');
+  const g = document.createElementNS(NS, 'a');
+  g.setAttribute('href', node.link);
+  if (node.style) g.classList.add(`style-${node.style}`);
 
   const circle = document.createElementNS(NS, 'circle');
   circle.classList.add('node');
@@ -99,7 +103,7 @@ const nodeElements = nodes.map(node => {
   text.classList.add('label');
   text.setAttribute('text-anchor', 'middle');
   text.setAttribute('dy', -24); // label above the node
-  text.textContent = node.label;
+  text.textContent = node.name;
 
   g.appendChild(circle);
   g.appendChild(text);
@@ -159,6 +163,10 @@ render();
 // mouse tracking since SVG doesn't have a native drag API.
 
 let dragTarget = null;
+let dragStart = null; // mouse position at mousedown, in screen pixels
+let didDrag = false;  // true once the mouse moved far enough to count as a drag
+
+const DRAG_THRESHOLD = 4; // pixels of movement before a press becomes a drag
 
 function toSVGCoords(evt) {
   const pt = svg.createSVGPoint();
@@ -168,14 +176,28 @@ function toSVGCoords(evt) {
 }
 
 nodeElements.forEach(({ node, g, circle }) => {
-  circle.addEventListener('mousedown', () => {
+  circle.addEventListener('mousedown', (evt) => {
+    if (evt.button !== 0) return; // leave middle-click etc. to the browser
+    evt.preventDefault();         // stop the browser's native link drag
     dragTarget = node;
+    dragStart = { x: evt.clientX, y: evt.clientY };
+    didDrag = false;
     circle.classList.add('dragging');
+  });
+
+  // A press that turned into a drag shouldn't also follow the link
+  g.addEventListener('click', (evt) => {
+    if (didDrag) evt.preventDefault();
   });
 });
 
 window.addEventListener('mousemove', (evt) => {
   if (!dragTarget) return;
+  if (!didDrag) {
+    const moved = Math.hypot(evt.clientX - dragStart.x, evt.clientY - dragStart.y);
+    if (moved < DRAG_THRESHOLD) return;
+    didDrag = true;
+  }
   const { x, y } = toSVGCoords(evt);
   dragTarget.x = x;
   dragTarget.y = y;

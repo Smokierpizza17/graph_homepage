@@ -19,7 +19,6 @@ html, body {
 /* Nodes */
 .node {
   fill: #4a90d9;
-  stroke: #ffffff;
   stroke-width: 1;
   cursor: pointer;
 }

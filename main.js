@@ -4,21 +4,40 @@ const nodesGroup = document.getElementById('nodes');
 
 const NS = 'http://www.w3.org/2000/svg';
 
+const settings = {
+  centering: 0.003,
+  repulsion: 10000,
+  linkStrength: 0.05,
+  linkLength: 100,
+  damping: 0.25,
+  speed: 50,
+};
+
+// --- Centre the coordinate system: (0, 0) is the middle of the screen ---
+// The viewBox matches the element's pixel size, so 1 unit = 1 pixel.
+function updateViewBox() {
+  const w = svg.clientWidth;
+  const h = svg.clientHeight;
+  svg.setAttribute('viewBox', `${-w / 2} ${-h / 2} ${w} ${h}`);
+}
+updateViewBox();
+window.addEventListener('resize', updateViewBox);
+
 // --- Sample data. Replace with real content later. ---
 const nodes = [
-  { id: 'a', label: 'Node A', x: 300, y: 200 },
-  { id: 'b', label: 'Node B', x: 500, y: 150 },
-  { id: 'c', label: 'Node C', x: 450, y: 350 },
-  { id: 'd', label: 'Node D', x: 650, y: 300 },
-  { id: 'e', label: 'Node E', x: 200, y: 400 },
+  { id: 'a', label: 'Node A', x: -100, y:  -100, vx: -70, vy: 70  },
+  { id: 'b', label: 'Node B', x:   50, y: -125, vx: -50, vy: 0   },
+  { id: 'c', label: 'Node C', x:    0, y:   75, vx: 0, vy: 0     },
+  { id: 'd', label: 'Node D', x:  200, y:   25, vx: 50, vy: -200 },
+  { id: 'e', label: 'Node E', x: -250, y:  125, vx: -100, vy: 0  },
 ];
 
 const edges = [
   { source: 'a', target: 'b' },
   { source: 'a', target: 'c' },
-  { source: 'b', target: 'd' },
-  { source: 'c', target: 'd' },
-  { source: 'c', target: 'e' },
+    { source: 'b', target: 'd' },
+      { source: 'c', target: 'd' },
+        { source: 'c', target: 'e' },
 ];
 
 // --- Build a lookup so edges can find node positions by id ---
@@ -105,11 +124,65 @@ window.addEventListener('mouseup', () => {
   dragTarget = null;
 });
 
-// This is where your physics tick loop will go later, e.g.:
-//
-// function tick() {
-//   applyForces(nodes, edges);
-//   render();
-//   requestAnimationFrame(tick);
-// }
-// tick();
+
+function applyForces(nodes, edges, dt) {
+  for (const node of nodes) {
+    // dampening (F~v)
+    node.vx += - settings.damping * node.vx * dt;
+    node.vy += - settings.damping * node.vy * dt;
+
+    // centering force (F~r)
+    node.vx += - settings.centering * node.x * dt;
+    node.vy += - settings.centering * node.y * dt;
+
+    // node-node repulsion (~r^2)
+    for (const other of nodes) {
+      if (other === node) continue;
+      const dx = node.x - other.x;
+      const dy = node.y - other.y;
+      const distSq = dx * dx + dy * dy || 0.01; // avoid divide-by-zero when overlapping
+      const dist = Math.sqrt(distSq);
+      const force = settings.repulsion / distSq;
+      node.vx += force * (dx / dist) * dt;
+      node.vy += force * (dy / dist) * dt;
+    }
+  }
+
+  // edge elasticity (~r)
+  for (const edge of edges) {
+    const nodeA = nodeById[edge.source];
+    const nodeB = nodeById[edge.target];
+    const dx = nodeA.x - nodeB.x;
+    const dy = nodeA.y - nodeB.y;
+    const distSq = dx * dx + dy * dy || 0.01; // avoid divide-by-zero when overlapping
+    const dist = Math.sqrt(distSq);
+    const force = - settings.linkStrength * (dist - settings.linkLength);
+    nodeA.vx += force * (dx / dist) * dt;
+    nodeA.vy += force * (dy / dist) * dt;
+    nodeB.vx += - force * (dx / dist) * dt;
+    nodeB.vy += - force * (dy / dist) * dt;
+  }
+}
+
+
+let lastTime = 0;
+
+function tick(currentTime) {
+  const dt = settings.speed * Math.min((currentTime - lastTime) / 1000, 0.05); // seconds since last frame
+  lastTime = currentTime;
+  
+  applyForces(nodes, edges, dt);
+  for (const node of nodes) {
+    if (node === dragTarget) {
+      node.vx = 0;
+      node.vy = 0;
+      continue;
+    }
+    node.x += node.vx * dt;
+    node.y += node.vy * dt;
+  }
+  render();
+  requestAnimationFrame(tick);
+}
+
+requestAnimationFrame(tick);

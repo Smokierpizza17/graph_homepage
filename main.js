@@ -1,5 +1,6 @@
 const svg = document.getElementById('graph');
 const edgesGroup = document.getElementById('edges');
+const edgesBehindGroup = document.getElementById('edges-behind');
 const nodesGroup = document.getElementById('nodes');
 const viewportGroup = document.getElementById('viewport');
 
@@ -181,15 +182,38 @@ const edges = EDGES
     if (!ok) console.warn('Skipping edge with unknown node id:', edge);
     return ok;
   })
-  .map(({ source, target, length = 1, strength = 1 }) => ({ source, target, length, strength }));
+  .map(({ source, target, length = 1, strength = 1, style, behind = false, curve = 0 }) =>
+    ({ source, target, length, strength, style, behind, curve, bendSign: 1 }));
 
-// --- Render edges as <line> elements ---
+// --- Render edges as <path> elements, so they can be straight or curved ---
+// The edge's style becomes an `edge-<name>` class, like node styles.
 const edgeElements = edges.map(edge => {
-  const line = document.createElementNS(NS, 'line');
-  line.classList.add('edge');
-  edgesGroup.appendChild(line);
-  return { edge, el: line };
+  const path = document.createElementNS(NS, 'path');
+  path.classList.add('edge');
+  if (edge.style) path.classList.add(`edge-${edge.style}`);
+  (edge.behind ? edgesBehindGroup : edgesGroup).appendChild(path);
+  return { edge, el: path };
 });
+
+// Path data from s to t, bulging outward (away from the centre) by edge.curve times its length.
+// The side only flips once the midpoint is clearly on the other side, so an edge
+// that passes near the centre doesn't flicker between the two.
+const BEND_FLIP_THRESHOLD = 0.2;
+function edgePath(edge, s, t) {
+  if (!edge.curve) return `M ${s.x} ${s.y} L ${t.x} ${t.y}`;
+  const dx = t.x - s.x;
+  const dy = t.y - s.y;
+  const mx = (s.x + t.x) / 2;
+  const my = (s.y + t.y) / 2;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len; // unit normal to the edge
+  const ny =  dx / len;
+  const outward = (nx * mx + ny * my) / (Math.hypot(mx, my) || 1); // -1..1, how far n points away from the centre
+  if (outward * edge.bendSign < -BEND_FLIP_THRESHOLD) edge.bendSign *= -1;
+  // A quadratic curve's apex sits halfway to its control point, hence the 2
+  const offset = 2 * edge.curve * len * edge.bendSign;
+  return `M ${s.x} ${s.y} Q ${mx + nx * offset} ${my + ny * offset} ${t.x} ${t.y}`;
+}
 
 // --- Render nodes as <circle> + <text> pairs, grouped in an <a> link ---
 // The node's style becomes a `style-<name>` class on the group, so CSS can
@@ -252,12 +276,9 @@ function render() {
   for (const { edge, el } of edgeElements) {
     const s = nodeById[edge.source];
     const t = nodeById[edge.target];
-    el.setAttribute('x1', s.x);
-    el.setAttribute('y1', s.y);
-    el.setAttribute('x2', t.x);
-    el.setAttribute('y2', t.y);
+    el.setAttribute('d', edgePath(edge, s, t));
     const strain = edgeStrain(edge.length * settings.linkLength, edge.strength * settings.linkStrength / 0.05, Math.hypot(t.x - s.x, t.y - s.y));
-    el.style.stroke = strainColor(strain);
+    el.style.stroke = el.style.color = strainColor(strain); // color feeds currentColor in the highlight glow
     el.style.strokeWidth = REST_WIDTH + (MAX_WIDTH - REST_WIDTH) * Math.abs(strain);
   }
 
@@ -280,6 +301,25 @@ let didDrag = false;  // true once the pointer moved far enough to count as a dr
 
 const DRAG_THRESHOLD = 4; // pixels of movement before a press becomes a drag
 
+// --- Edge highlight: the edges of the hovered or dragged node get the `highlight` class ---
+// The dragged node wins, so the highlight stays put while the pointer lags behind it.
+let hoveredNode = null;
+let highlightedNode = null;
+
+const edgeElementsByNode = Object.fromEntries(nodes.map(n => [n.id, []]));
+for (const edgeElement of edgeElements) {
+  edgeElementsByNode[edgeElement.edge.source].push(edgeElement);
+  edgeElementsByNode[edgeElement.edge.target].push(edgeElement);
+}
+
+function updateEdgeHighlight() {
+  const node = dragTarget || hoveredNode;
+  if (node === highlightedNode) return;
+  if (highlightedNode) edgeElementsByNode[highlightedNode.id].forEach(({ el }) => el.classList.remove('highlight'));
+  if (node) edgeElementsByNode[node.id].forEach(({ el }) => el.classList.add('highlight'));
+  highlightedNode = node;
+}
+
 // Screen position -> graph coordinates, taking the current pan and zoom into account
 function toSVGCoords(evt) {
   const pt = svg.createSVGPoint();
@@ -298,6 +338,19 @@ nodeElements.forEach(({ node, g, circle }) => {
     dragStart = { x: evt.clientX, y: evt.clientY };
     didDrag = false;
     circle.classList.add('dragging');
+    updateEdgeHighlight();
+  });
+
+  // Mouse and pen only: on touchscreens the drag highlight covers it
+  circle.addEventListener('pointerenter', (evt) => {
+    if (evt.pointerType === 'touch') return;
+    hoveredNode = node;
+    updateEdgeHighlight();
+  });
+  circle.addEventListener('pointerleave', () => {
+    if (hoveredNode !== node) return;
+    hoveredNode = null;
+    updateEdgeHighlight();
   });
 
   // Stop the browser's native link drag
@@ -327,6 +380,7 @@ function endDrag(evt) {
   document.querySelectorAll('.node.dragging').forEach(el => el.classList.remove('dragging'));
   dragTarget = null;
   dragPointerId = null;
+  updateEdgeHighlight();
 }
 window.addEventListener('pointerup', endDrag);
 window.addEventListener('pointercancel', endDrag); // e.g. the browser took over the touch

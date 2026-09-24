@@ -27,6 +27,8 @@
   --button-bg-hover: rgba(157, 140, 245, 0.22);
 
   --font: 'Space Grotesk', system-ui, sans-serif;
+
+  --hover-fade:      0.15s; /* how long node and edge highlights take to fade in and out */
 }
 
 html, body {
@@ -62,6 +64,16 @@ body {
   stroke: var(--edge-rest);
   stroke-width: 1;
   stroke-linecap: round;
+  fill: none; /* edges are paths; without this curved ones get filled in */
+  transition: filter var(--hover-fade) ease, opacity var(--hover-fade) ease; /* fade the highlight in and out */
+}
+
+/* Edges of the hovered or dragged node. The stroke is set inline by the strain
+   colouring, so brighten it with a filter instead; currentColor is the same colour.
+   !important beats the opacity of edge styles like .edge-cross. */
+.edge.highlight {
+  opacity: 1 !important;
+  filter: brightness(2.2) drop-shadow(0 0 3px currentColor);
 }
 
 /* Nodes: styles set --node-color on the group; fill and glow both follow it */
@@ -69,6 +81,7 @@ body {
   fill: var(--node-color, var(--color-cyan));
   filter: drop-shadow(0 0 5px var(--node-color, var(--color-cyan)));
   cursor: pointer;
+  transition: filter var(--hover-fade) ease; /* fade hover and drag in and out */
 }
 
 /* Nodes without a link can only be dragged */

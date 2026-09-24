@@ -22,7 +22,9 @@
   <g id="stars"></g>
   <!-- Pan and zoom move this group; the stars stay put behind it -->
   <g id="viewport">
-    <!-- Edges must be drawn before nodes so nodes render on top -->
+    <!-- Edges must be drawn before nodes so nodes render on top;
+         edges marked `behind` go underneath the others -->
+    <g id="edges-behind"></g>
     <g id="edges"></g>
     <g id="nodes"></g>
   </g>

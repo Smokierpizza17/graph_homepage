@@ -6,8 +6,8 @@ const NS = 'http://www.w3.org/2000/svg';
 
 // Each setting defines its default value and the range of its slider.
 const settingsConfig = {
-  centering:    { label: 'Centering',     value: 0.003,   min: 0.0005, max: 0.02,  step: 0.0005  },
-  rotation:     { label: 'Rotation',      value: 0.0005,   min: -0.01, max: 0.01,   step: 0.0005 },
+  centering:    { label: 'Centering',     value: 0.05,    min: 0.005,  max: 0.2,   step: 0.005  },
+  rotation:     { label: 'Rotation',      value: 0.0005,  min: -0.01,  max: 0.01,  step: 0.0005 },
   repulsion:    { label: 'Repulsion',     value: 10000,   min: 0,      max: 50000, step: 500     },
   linkStrength: { label: 'Link strength', value: 0.05,    min: 0.002,  max: 0.3,   step: 0.002   },
   linkLength:   { label: 'Link length',   value: 100,     min: 10,     max: 400,   step: 5       },
@@ -23,8 +23,7 @@ const settings = Object.fromEntries(
 
 // --- Settings panel: one slider per entry in settingsConfig ---
 const settingsPanel = document.getElementById('settings');
-// Start expanded on wide screens, collapsed on phones so the graph stays visible
-settingsPanel.open = window.matchMedia('(min-width: 600px)').matches;
+settingsPanel.open = false;
 for (const [key, cfg] of Object.entries(settingsConfig)) {
   const row = document.createElement('label');
   row.classList.add('setting');
@@ -63,7 +62,7 @@ updateViewBox();
 window.addEventListener('resize', updateViewBox);
 
 // --- Graph data, loaded from data/nodes.js and data/edges.js ---
-const nodes = NODES.map(({ id, name, link, style }) => ({ id, name, link, style }));
+const nodes = NODES.map(({ id, name, link, style, size = 1, centering = 0 }) => ({ id, name, link, style, size, centering }));
 
 // Scatter nodes randomly across the screen and stop them moving;
 // the simulation then pulls them back into shape.
@@ -87,11 +86,13 @@ settingsPanel.appendChild(randomButton);
 const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
 
 // Skip edges that reference a missing id instead of crashing the render loop
-const edges = EDGES.filter(edge => {
-  const ok = edge.source in nodeById && edge.target in nodeById;
-  if (!ok) console.warn('Skipping edge with unknown node id:', edge);
-  return ok;
-});
+const edges = EDGES
+  .filter(edge => {
+    const ok = edge.source in nodeById && edge.target in nodeById;
+    if (!ok) console.warn('Skipping edge with unknown node id:', edge);
+    return ok;
+  })
+  .map(({ source, target, length = 1 }) => ({ source, target, length }));
 
 // --- Render edges as <line> elements ---
 const edgeElements = edges.map(edge => {
@@ -111,12 +112,12 @@ const nodeElements = nodes.map(node => {
 
   const circle = document.createElementNS(NS, 'circle');
   circle.classList.add('node');
-  circle.setAttribute('r', 18);
+  circle.setAttribute('r', node.size * 18);
 
   const text = document.createElementNS(NS, 'text');
   text.classList.add('label');
   text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('dy', -24); // label above the node
+  text.setAttribute('dy', node.size * -24); // label above the node
   text.textContent = node.name;
 
   g.appendChild(circle);
@@ -141,8 +142,8 @@ function mixColor(a, b, t) {
 
 // strain = relative change in length, clamped to [-1, 1]
 // (-1 = fully collapsed, 1 = stretched to double the rest length)
-function edgeStrain(dist) {
-  return Math.max(-1, Math.min(1, (dist - settings.linkLength) / settings.linkLength));
+function edgeStrain(naturalLength, dist) {
+  return Math.max(-1, Math.min(1, (dist - naturalLength) / naturalLength));
 }
 
 function strainColor(strain) {
@@ -160,7 +161,7 @@ function render() {
     el.setAttribute('y1', s.y);
     el.setAttribute('x2', t.x);
     el.setAttribute('y2', t.y);
-    const strain = edgeStrain(Math.hypot(t.x - s.x, t.y - s.y));
+    const strain = edgeStrain(edge.length * settings.linkLength, Math.hypot(t.x - s.x, t.y - s.y));
     el.style.stroke = strainColor(strain);
     el.style.strokeWidth = REST_WIDTH + (MAX_WIDTH - REST_WIDTH) * Math.abs(strain);
   }
@@ -254,17 +255,17 @@ function applyForces(nodes, edges, dt) {
     // drag toward a gently rotating fluid (F ~ v_fluid - v)
     const fluidVx = -settings.rotation * node.y;
     const fluidVy =  settings.rotation * node.x;
-    node.vx += - settings.damping * (node.vx - fluidVx) * dt;
-    node.vy += - settings.damping * (node.vy - fluidVy) * dt;
+    node.vx += - settings.damping * (node.vx - fluidVx) * dt / node.size;
+    node.vy += - settings.damping * (node.vy - fluidVy) * dt / node.size;
 
     // temperature (Langevin thermostat)
-    const kick = Math.sqrt(2 * settings.damping * settings.temperature * dt);
+    const kick = Math.sqrt(2 * settings.damping * settings.temperature * dt / node.size);
     node.vx += kick * randn();
     node.vy += kick * randn();
 
     // centering force (F~r)
-    node.vx += - settings.centering * node.x * dt;
-    node.vy += - settings.centering * node.y * dt;
+    node.vx += - node.centering * settings.centering * node.x * dt / node.size;
+    node.vy += - node.centering * settings.centering * node.y * dt / node.size;
 
     // node-node repulsion (~r^2)
     for (const other of nodes) {
@@ -274,8 +275,8 @@ function applyForces(nodes, edges, dt) {
       const distSq = dx * dx + dy * dy || 0.01; // avoid divide-by-zero when overlapping
       const dist = Math.sqrt(distSq);
       const force = settings.repulsion / distSq;
-      node.vx += force * (dx / dist) * dt;
-      node.vy += force * (dy / dist) * dt;
+      node.vx += force * (dx / dist) * dt / node.size;
+      node.vy += force * (dy / dist) * dt / node.size;
     }
   }
 
@@ -287,11 +288,11 @@ function applyForces(nodes, edges, dt) {
     const dy = nodeA.y - nodeB.y;
     const distSq = dx * dx + dy * dy || 0.01; // avoid divide-by-zero when overlapping
     const dist = Math.sqrt(distSq);
-    const force = - settings.linkStrength * (dist - settings.linkLength);
-    nodeA.vx += force * (dx / dist) * dt;
-    nodeA.vy += force * (dy / dist) * dt;
-    nodeB.vx += - force * (dx / dist) * dt;
-    nodeB.vy += - force * (dy / dist) * dt;
+    const force = - settings.linkStrength * (dist - settings.linkLength * edge.length);
+    nodeA.vx += force * (dx / dist) * dt / nodeA.size;
+    nodeA.vy += force * (dy / dist) * dt / nodeA.size;
+    nodeB.vx += - force * (dx / dist) * dt / nodeB.size;
+    nodeB.vy += - force * (dy / dist) * dt / nodeB.size;
   }
 }
 

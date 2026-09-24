@@ -1,0 +1,8 @@
+/* Node styles: a node with `style: 'foo'` in data/nodes.js gets class `style-foo`
+   on its group, so rules can target `.style-foo .node` and `.style-foo .label`. */
+.style-index .node   { fill: #fca311; }
+.style-index .label  { font-weight: bold; }
+
+.style-first .node   { fill: #6d2dd3; }
+
+.style-second .node { fill: #a5a5a5; }

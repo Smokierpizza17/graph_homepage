@@ -181,7 +181,7 @@ const edges = EDGES
     if (!ok) console.warn('Skipping edge with unknown node id:', edge);
     return ok;
   })
-  .map(({ source, target, length = 1 }) => ({ source, target, length }));
+  .map(({ source, target, length = 1, strength = 1 }) => ({ source, target, length, strength }));
 
 // --- Render edges as <line> elements ---
 const edgeElements = edges.map(edge => {
@@ -237,8 +237,8 @@ function mixColor(a, b, t) {
 
 // strain = relative change in length, clamped to [-1, 1]
 // (-1 = fully collapsed, 1 = stretched to double the rest length)
-function edgeStrain(naturalLength, dist) {
-  return Math.max(-1, Math.min(1, (dist - naturalLength) / naturalLength));
+function edgeStrain(naturalLength, strength, dist) {
+  return strength * Math.max(-1, Math.min(1, (dist - naturalLength) / naturalLength));
 }
 
 function strainColor(strain) {
@@ -256,7 +256,7 @@ function render() {
     el.setAttribute('y1', s.y);
     el.setAttribute('x2', t.x);
     el.setAttribute('y2', t.y);
-    const strain = edgeStrain(edge.length * settings.linkLength, Math.hypot(t.x - s.x, t.y - s.y));
+    const strain = edgeStrain(edge.length * settings.linkLength, edge.strength * settings.linkStrength / 0.05, Math.hypot(t.x - s.x, t.y - s.y));
     el.style.stroke = strainColor(strain);
     el.style.strokeWidth = REST_WIDTH + (MAX_WIDTH - REST_WIDTH) * Math.abs(strain);
   }
@@ -594,7 +594,7 @@ function applyForces(nodes, edges, dt) {
     const dy = nodeA.y - nodeB.y;
     const distSq = dx * dx + dy * dy || 0.01; // avoid divide-by-zero when overlapping
     const dist = Math.sqrt(distSq);
-    const force = - settings.linkStrength * (dist - settings.linkLength * edge.length);
+    const force = - settings.linkStrength * edge.strength * (dist - settings.linkLength * edge.length);
     nodeA.vx += force * (dx / dist) * dt / nodeA.size;
     nodeA.vy += force * (dy / dist) * dt / nodeA.size;
     nodeB.vx += - force * (dx / dist) * dt / nodeB.size;
@@ -616,8 +616,8 @@ function tick(currentTime) {
       node.vy = 0;
       continue;
     }
-    node.x += node.vx * dt;
-    node.y += node.vy * dt;
+    node.x += Math.min(node.vx * dt, 1000);
+    node.y += Math.min(node.vy * dt, 1000);
   }
   starAngle += settings.rotation * STAR_PARALLAX * dt;
   updateStars();

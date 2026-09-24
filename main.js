@@ -4,14 +4,49 @@ const nodesGroup = document.getElementById('nodes');
 
 const NS = 'http://www.w3.org/2000/svg';
 
-const settings = {
-  centering: 0.003,
-  repulsion: 10000,
-  linkStrength: 0.05,
-  linkLength: 100,
-  damping: 0.25,
-  speed: 50,
+// Each setting defines its default value and the range of its slider.
+const settingsConfig = {
+  centering:    { label: 'Centering',     value: 0.003, min: 0.0005,  max: 0.02,  step: 0.0005 },
+  repulsion:    { label: 'Repulsion',     value: 10000, min: 500,  max: 50000, step: 500 },
+  linkStrength: { label: 'Link strength', value: 0.05,  min: 0.002,  max: 0.3,   step: 0.002 },
+  linkLength:   { label: 'Link length',   value: 100,   min: 10, max: 400,   step: 5 },
+  damping:      { label: 'Damping',       value: 0.25,  min: 0,  max: 1,     step: 0.01 },
+  speed:        { label: 'Speed',         value: 50,    min: 1,  max: 100,   step: 1 },
 };
+
+// Current values, read by the simulation. Updated by the sliders.
+const settings = Object.fromEntries(
+  Object.entries(settingsConfig).map(([key, cfg]) => [key, cfg.value])
+);
+
+// --- Settings panel: one slider per entry in settingsConfig ---
+const settingsPanel = document.getElementById('settings');
+for (const [key, cfg] of Object.entries(settingsConfig)) {
+  const row = document.createElement('label');
+  row.classList.add('setting');
+
+  const name = document.createElement('span');
+  name.classList.add('setting-name');
+  name.textContent = cfg.label;
+
+  const output = document.createElement('span');
+  output.classList.add('setting-value');
+  output.textContent = cfg.value;
+
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = cfg.min;
+  slider.max = cfg.max;
+  slider.step = cfg.step;
+  slider.value = cfg.value;
+  slider.addEventListener('input', () => {
+    settings[key] = Number(slider.value);
+    output.textContent = slider.value;
+  });
+
+  row.append(name, output, slider);
+  settingsPanel.appendChild(row);
+}
 
 // --- Centre the coordinate system: (0, 0) is the middle of the screen ---
 // The viewBox matches the element's pixel size, so 1 unit = 1 pixel.

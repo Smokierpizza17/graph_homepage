@@ -32,6 +32,44 @@ html, body {
   cursor: grabbing;
 }
 
+/* Settings panel */
+#settings {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: 200px;
+  padding: 10px 12px;
+  background: rgba(40, 40, 40, 0.9);
+  border: 1px solid #333;
+  border-radius: 6px;
+  font-family: sans-serif;
+  font-size: 12px;
+  color: #cccccc;
+}
+
+.setting {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  row-gap: 2px;
+  margin-bottom: 8px;
+}
+
+.setting:last-child {
+  margin-bottom: 0;
+}
+
+.setting-value {
+  color: #888;
+  font-variant-numeric: tabular-nums;
+}
+
+.setting input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  accent-color: #4a90d9;
+}
+
 /* Node labels */
 .label {
   fill: #cccccc;

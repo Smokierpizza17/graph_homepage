@@ -63,8 +63,8 @@ window.addEventListener('resize', updateViewBox);
 // Nodes start scattered around the centre; the simulation spreads them out.
 const nodes = NODES.map(({ id, name, link, style }) => ({
   id, name, link, style,
-  x: (Math.random() - 0.5) * 200,
-  y: (Math.random() - 0.5) * 200,
+  x: (Math.random() - 0.5) * svg.clientWidth,
+  y: (Math.random() - 0.5) * svg.clientHeight,
   vx: 0,
   vy: 0,
 }));

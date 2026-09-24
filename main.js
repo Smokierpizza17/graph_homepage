@@ -106,7 +106,7 @@ const edgeElements = edges.map(edge => {
 // target both the circle and its label.
 const nodeElements = nodes.map(node => {
   const g = document.createElementNS(NS, 'a');
-  g.setAttribute('href', node.link);
+  if (node.link) g.setAttribute('href', node.link); // without href it's just a draggable node
   if (node.style) g.classList.add(`style-${node.style}`);
 
   const circle = document.createElementNS(NS, 'circle');

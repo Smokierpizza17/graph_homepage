@@ -23,6 +23,15 @@ html, body {
   cursor: pointer;
 }
 
+/* Nodes without a link can only be dragged */
+a:not([href]) .node {
+  cursor: grab;
+}
+
+a:not([href]) .node.dragging {
+  cursor: grabbing;
+}
+
 /* Hover and drag use filters rather than fill, so they work on any style's
    colour and can't be overridden by the style rules below. */
 /* Only on devices that can really hover; on touchscreens :hover sticks after a tap. */
@@ -39,14 +48,7 @@ html, body {
   cursor: grabbing;
 }
 
-/* Node styles: a node with `style: 'foo'` in data/nodes.js gets class `style-foo`
-   on its group, so rules can target `.style-foo .node` and `.style-foo .label`. */
-.style-hub .node   { fill: #d9a04a; }
-.style-hub .label  { font-weight: bold; }
-
-.style-dev .node   { fill: #5bb36a; }
-
-.style-media .node { fill: #c0504d; }
+/* Node styles (`.style-foo .node`, `.style-foo .label`) live in data/customstyles.css */
 
 /* Settings panel */
 #settings {

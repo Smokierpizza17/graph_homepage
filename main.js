@@ -10,7 +10,7 @@ const settingsConfig = {
   repulsion:    { label: 'Repulsion',     value: 10000, min: 500,  max: 50000, step: 500 },
   linkStrength: { label: 'Link strength', value: 0.05,  min: 0.002,  max: 0.3,   step: 0.002 },
   linkLength:   { label: 'Link length',   value: 100,   min: 10, max: 400,   step: 5 },
-  damping:      { label: 'Damping',       value: 0.25,  min: 0,  max: 1,     step: 0.01 },
+  damping:      { label: 'Damping',       value: 0.25,  min: 0.01,  max: 1,     step: 0.01 },
   speed:        { label: 'Speed',         value: 50,    min: 1,  max: 100,   step: 1 },
 };
 
@@ -70,9 +70,9 @@ const nodes = [
 const edges = [
   { source: 'a', target: 'b' },
   { source: 'a', target: 'c' },
-    { source: 'b', target: 'd' },
-      { source: 'c', target: 'd' },
-        { source: 'c', target: 'e' },
+  { source: 'b', target: 'd' },
+  { source: 'c', target: 'd' },
+  { source: 'c', target: 'e' },
 ];
 
 // --- Build a lookup so edges can find node positions by id ---
@@ -107,6 +107,31 @@ const nodeElements = nodes.map(node => {
   return { node, g, circle, text };
 });
 
+// --- Edge colour by strain: compressed -> blue, at rest -> grey, stretched -> red ---
+const COMPRESSED_COLOR = [70, 130, 230];
+const REST_COLOR       = [85, 85, 85];
+const STRETCHED_COLOR  = [230, 70, 70];
+
+// --- Edge thickness by |strain|: REST_WIDTH at rest, MAX_WIDTH at full strain ---
+const REST_WIDTH = 1;
+const MAX_WIDTH  = 3;
+
+function mixColor(a, b, t) {
+  return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(', ')})`;
+}
+
+// strain = relative change in length, clamped to [-1, 1]
+// (-1 = fully collapsed, 1 = stretched to double the rest length)
+function edgeStrain(dist) {
+  return Math.max(-1, Math.min(1, (dist - settings.linkLength) / settings.linkLength));
+}
+
+function strainColor(strain) {
+  return strain < 0
+    ? mixColor(REST_COLOR, COMPRESSED_COLOR, -strain)
+    : mixColor(REST_COLOR, STRETCHED_COLOR, strain);
+}
+
 // --- Position everything according to current node.x / node.y ---
 function render() {
   for (const { edge, el } of edgeElements) {
@@ -116,6 +141,9 @@ function render() {
     el.setAttribute('y1', s.y);
     el.setAttribute('x2', t.x);
     el.setAttribute('y2', t.y);
+    const strain = edgeStrain(Math.hypot(t.x - s.x, t.y - s.y));
+    el.style.stroke = strainColor(strain);
+    el.style.strokeWidth = REST_WIDTH + (MAX_WIDTH - REST_WIDTH) * Math.abs(strain);
   }
 
   for (const { node, g } of nodeElements) {

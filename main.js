@@ -6,13 +6,14 @@ const NS = 'http://www.w3.org/2000/svg';
 
 // Each setting defines its default value and the range of its slider.
 const settingsConfig = {
-  centering:    { label: 'Centering',     value: 0.003, min: 0.0005,  max: 0.02,  step: 0.0005 },
-  repulsion:    { label: 'Repulsion',     value: 10000, min: 0,  max: 50000, step: 500 },
-  linkStrength: { label: 'Link strength', value: 0.05,  min: 0.002,  max: 0.3,   step: 0.002 },
-  linkLength:   { label: 'Link length',   value: 100,   min: 10, max: 400,   step: 5 },
-  damping:      { label: 'Damping',       value: 0.25,  min: 0.01,  max: 1,     step: 0.01 },
-  speed:        { label: 'Speed',         value: 50,    min: 1,  max: 100,   step: 1 },
-  temperature:  { label: 'Temperature',   value: 0,    min: 0,  max: 20, step: 0.05},
+  centering:    { label: 'Centering',     value: 0.003,   min: 0.0005, max: 0.02,  step: 0.0005  },
+  rotation:     { label: 'Rotation',      value: 0.0005,   min: -0.01, max: 0.01,   step: 0.0005 },
+  repulsion:    { label: 'Repulsion',     value: 10000,   min: 0,      max: 50000, step: 500     },
+  linkStrength: { label: 'Link strength', value: 0.05,    min: 0.002,  max: 0.3,   step: 0.002   },
+  linkLength:   { label: 'Link length',   value: 100,     min: 10,     max: 400,   step: 5       },
+  damping:      { label: 'Damping',       value: 0.25,    min: 0.01,   max: 1,     step: 0.01    },
+  speed:        { label: 'Speed',         value: 50,      min: 1,      max: 100,   step: 1       },
+  temperature:  { label: 'Temperature',   value: 0,       min: 0,      max: 20,    step: 0.05    },
 };
 
 // Current values, read by the simulation. Updated by the sliders.
@@ -242,9 +243,19 @@ function randn() {
 
 function applyForces(nodes, edges, dt) {
   for (const node of nodes) {
-    // dampening (F~v)
-    node.vx += - settings.damping * node.vx * dt;
-    node.vy += - settings.damping * node.vy * dt;
+    // // dampening (F~v)
+    // node.vx += - settings.damping * node.vx * dt;
+    // node.vy += - settings.damping * node.vy * dt;
+
+    // // gentle rotation (v~r)
+    // node.vx -= settings.rotation * node.y * dt;
+    // node.vy += settings.rotation * node.x * dt;
+
+    // drag toward a gently rotating fluid (F ~ v_fluid - v)
+    const fluidVx = -settings.rotation * node.y;
+    const fluidVy =  settings.rotation * node.x;
+    node.vx += - settings.damping * (node.vx - fluidVx) * dt;
+    node.vy += - settings.damping * (node.vy - fluidVy) * dt;
 
     // temperature (Langevin thermostat)
     const kick = Math.sqrt(2 * settings.damping * settings.temperature * dt);

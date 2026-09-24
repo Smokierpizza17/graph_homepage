@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Graph View</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -13,8 +14,11 @@
   <g id="nodes"></g>
 </svg>
 
-<!-- Sliders are generated from settingsConfig in main.js -->
-<div id="settings"></div>
+<!-- Sliders are generated from settingsConfig in main.js.
+     Collapsible so it doesn't cover the graph on small screens. -->
+<details id="settings">
+  <summary>Settings</summary>
+</details>
 
 <!-- Graph data: edit these files to change the nodes and their connections -->
 <script src="data/nodes.js"></script>

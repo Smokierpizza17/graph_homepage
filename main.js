@@ -22,6 +22,8 @@ const settings = Object.fromEntries(
 
 // --- Settings panel: one slider per entry in settingsConfig ---
 const settingsPanel = document.getElementById('settings');
+// Start expanded on wide screens, collapsed on phones so the graph stays visible
+settingsPanel.open = window.matchMedia('(min-width: 600px)').matches;
 for (const [key, cfg] of Object.entries(settingsConfig)) {
   const row = document.createElement('label');
   row.classList.add('setting');
@@ -171,11 +173,13 @@ render();
 
 // --- Dragging ---
 // Hover is handled entirely by CSS (:hover). Dragging needs manual
-// mouse tracking since SVG doesn't have a native drag API.
+// pointer tracking since SVG doesn't have a native drag API.
+// Pointer events cover mouse, touch and pen alike.
 
 let dragTarget = null;
-let dragStart = null; // mouse position at mousedown, in screen pixels
-let didDrag = false;  // true once the mouse moved far enough to count as a drag
+let dragPointerId = null; // which pointer (finger/mouse) is dragging, so a second finger is ignored
+let dragStart = null; // pointer position at pointerdown, in screen pixels
+let didDrag = false;  // true once the pointer moved far enough to count as a drag
 
 const DRAG_THRESHOLD = 4; // pixels of movement before a press becomes a drag
 
@@ -187,14 +191,19 @@ function toSVGCoords(evt) {
 }
 
 nodeElements.forEach(({ node, g, circle }) => {
-  circle.addEventListener('mousedown', (evt) => {
+  circle.addEventListener('pointerdown', (evt) => {
     if (evt.button !== 0) return; // leave middle-click etc. to the browser
-    evt.preventDefault();         // stop the browser's native link drag
+    if (dragTarget) return;       // already dragging with another finger
+    evt.preventDefault();
     dragTarget = node;
+    dragPointerId = evt.pointerId;
     dragStart = { x: evt.clientX, y: evt.clientY };
     didDrag = false;
     circle.classList.add('dragging');
   });
+
+  // Stop the browser's native link drag
+  g.addEventListener('dragstart', (evt) => evt.preventDefault());
 
   // A press that turned into a drag shouldn't also follow the link
   g.addEventListener('click', (evt) => {
@@ -202,8 +211,8 @@ nodeElements.forEach(({ node, g, circle }) => {
   });
 });
 
-window.addEventListener('mousemove', (evt) => {
-  if (!dragTarget) return;
+window.addEventListener('pointermove', (evt) => {
+  if (!dragTarget || evt.pointerId !== dragPointerId) return;
   if (!didDrag) {
     const moved = Math.hypot(evt.clientX - dragStart.x, evt.clientY - dragStart.y);
     if (moved < DRAG_THRESHOLD) return;
@@ -215,11 +224,14 @@ window.addEventListener('mousemove', (evt) => {
   render();
 });
 
-window.addEventListener('mouseup', () => {
-  if (!dragTarget) return;
+function endDrag(evt) {
+  if (!dragTarget || evt.pointerId !== dragPointerId) return;
   document.querySelectorAll('.node.dragging').forEach(el => el.classList.remove('dragging'));
   dragTarget = null;
-});
+  dragPointerId = null;
+}
+window.addEventListener('pointerup', endDrag);
+window.addEventListener('pointercancel', endDrag); // e.g. the browser took over the touch
 
 // Standard normal sample (mean 0, std 1)
 function randn() {

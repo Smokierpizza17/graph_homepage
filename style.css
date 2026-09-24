@@ -1,9 +1,43 @@
+/* Palette: every colour in the page comes from here. main.js reads the
+   --edge-* colours too, so the strain colouring follows the theme. */
+:root {
+  --bg-inner:        #141a2e;
+  --bg-mid:          #0a0d18;
+  --bg-outer:        #05060b;
+  --star:            #e8ecff;
+
+  --color-sun:       #f6b94a;
+  --color-violet:    #9d8cf5;
+  --color-cyan:      #5ccfe6;
+  --color-silver:    #cfd5e0;
+
+  --label:           #c3cbe0;
+  --label-outline:   rgba(5, 6, 11, 0.7);
+
+  --edge-rest:       #2e3858;
+  --edge-compressed: #5ccfe6;
+  --edge-stretched:  #f28b82;
+
+  --panel-bg:        rgba(14, 18, 34, 0.6);
+  --panel-border:    rgba(157, 140, 245, 0.2);
+  --panel-text:      #c3cbe0;
+  --panel-muted:     #7a84a3;
+  --button-bg:       rgba(157, 140, 245, 0.12);
+  --button-bg-hover: rgba(157, 140, 245, 0.22);
+
+  --font: 'Space Grotesk', system-ui, sans-serif;
+}
+
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: #1a1a1a; /* plain dark background, swap later */
   overflow: hidden;
+}
+
+body {
+  background: radial-gradient(ellipse at center, var(--bg-inner) 0%, var(--bg-mid) 60%, var(--bg-outer) 100%);
+  background-color: var(--bg-outer);
 }
 
 #graph {
@@ -11,15 +45,22 @@ html, body {
   touch-action: none; /* let touch drags move nodes instead of scrolling/zooming the page */
 }
 
-/* Edges */
-.edge {
-  stroke: #555;
-  stroke-width: 1;
+/* Background stars, generated in main.js */
+.star {
+  fill: var(--star);
 }
 
-/* Nodes */
+/* Edges */
+.edge {
+  stroke: var(--edge-rest);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+/* Nodes: styles set --node-color on the group; fill and glow both follow it */
 .node {
-  fill: #4a90d9;
+  fill: var(--node-color, var(--color-cyan));
+  filter: drop-shadow(0 0 5px var(--node-color, var(--color-cyan)));
   cursor: pointer;
 }
 
@@ -33,22 +74,38 @@ a:not([href]) .node.dragging {
 }
 
 /* Hover and drag use filters rather than fill, so they work on any style's
-   colour and can't be overridden by the style rules below. */
+   colour and can't be overridden by the style rules. */
 /* Only on devices that can really hover; on touchscreens :hover sticks after a tap. */
 @media (hover: hover) {
   .node:hover {
-    filter: brightness(1.3);
+    filter: brightness(1.2) drop-shadow(0 0 12px var(--node-color, var(--color-cyan)));
   }
 }
 
 .node.dragging {
-  filter: brightness(1.6);
+  filter: brightness(1.4) drop-shadow(0 0 16px var(--node-color, var(--color-cyan)));
   stroke: #ffffff;
   stroke-width: 2;
   cursor: grabbing;
 }
 
-/* Node styles (`.style-foo .node`, `.style-foo .label`) live in data/customstyles.css */
+/* Node styles (`.style-foo`, `.style-foo .node`, `.style-foo .label`) live in data/customstyles.css */
+
+/* Node labels */
+.label {
+  fill: var(--label);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  /* dark outline behind the text keeps it readable over edges and busy backgrounds */
+  paint-order: stroke;
+  stroke: var(--label-outline);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none; /* let mouse events pass through to the node */
+  user-select: none;
+}
 
 /* Settings panel */
 #settings {
@@ -57,12 +114,15 @@ a:not([href]) .node.dragging {
   right: 12px;
   width: 200px;
   padding: 10px 12px;
-  background: rgba(40, 40, 40, 0.9);
-  border: 1px solid #333;
-  border-radius: 6px;
-  font-family: sans-serif;
+  background: var(--panel-bg);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  font-family: var(--font);
   font-size: 12px;
-  color: #cccccc;
+  letter-spacing: 0.02em;
+  color: var(--panel-text);
 }
 
 #settings summary {
@@ -86,7 +146,7 @@ a:not([href]) .node.dragging {
 }
 
 .setting-value {
-  color: #888;
+  color: var(--panel-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -94,7 +154,7 @@ a:not([href]) .node.dragging {
   grid-column: 1 / -1;
   width: 100%;
   margin: 0;
-  accent-color: #4a90d9;
+  accent-color: var(--color-violet);
 }
 
 .settings-buttons {
@@ -106,17 +166,17 @@ a:not([href]) .node.dragging {
   flex: 1;
   width: 100%;
   padding: 4px 0;
-  background: #333;
-  border: 1px solid #444;
+  background: var(--button-bg);
+  border: 1px solid var(--panel-border);
   border-radius: 4px;
-  color: #cccccc;
+  color: var(--panel-text);
   font: inherit;
   cursor: pointer;
 }
 
 @media (hover: hover) {
   .settings-button:hover {
-    background: #3d3d3d;
+    background: var(--button-bg-hover);
   }
 }
 
@@ -153,13 +213,4 @@ a:not([href]) .node.dragging {
   #settings[open] {
     left: 8px;
   }
-}
-
-/* Node labels */
-.label {
-  fill: #cccccc;
-  font-family: sans-serif;
-  font-size: 12px;
-  pointer-events: none; /* let mouse events pass through to the node */
-  user-select: none;
 }

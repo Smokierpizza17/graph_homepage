@@ -73,6 +73,26 @@ function updateViewBox() {
 updateViewBox();
 window.addEventListener('resize', updateViewBox);
 
+// --- Background stars: faint dots that turn slowly with the rotation setting ---
+// Scattered over a disc covering the whole screen, so rotating never shows a gap.
+const starsGroup = document.getElementById('stars');
+const STAR_COUNT = 150;
+const STAR_PARALLAX = 0.2; // stars turn at this fraction of the graph's rotation
+let starAngle = 0;         // radians
+
+const starRadius = Math.hypot(screen.width, screen.height) / 2;
+for (let i = 0; i < STAR_COUNT; i++) {
+  const r = starRadius * Math.sqrt(Math.random()); // sqrt gives uniform density over the disc
+  const angle = Math.random() * 2 * Math.PI;
+  const star = document.createElementNS(NS, 'circle');
+  star.classList.add('star');
+  star.setAttribute('cx', r * Math.cos(angle));
+  star.setAttribute('cy', r * Math.sin(angle));
+  star.setAttribute('r', 0.4 + Math.random());
+  star.setAttribute('opacity', 0.1 + Math.random() * 0.3);
+  starsGroup.appendChild(star);
+}
+
 // --- Graph data, loaded from data/nodes.js and data/edges.js ---
 const nodes = NODES.map(({ id, name, link, style, size = 1, centering = 0 }) => ({ id, name, link, style, size, centering }));
 
@@ -149,10 +169,15 @@ const nodeElements = nodes.map(node => {
   return { node, g, circle, text };
 });
 
-// --- Edge colour by strain: compressed -> blue, at rest -> grey, stretched -> red ---
-const COMPRESSED_COLOR = [70, 130, 230];
-const REST_COLOR       = [85, 85, 85];
-const STRETCHED_COLOR  = [230, 70, 70];
+// --- Edge colour by strain: compressed -> cyan, at rest -> slate, stretched -> coral ---
+// The colours come from the --edge-* variables in style.css (as #rrggbb hex).
+function cssColor(name) {
+  const hex = getComputedStyle(document.documentElement).getPropertyValue(name).trim().slice(1);
+  return [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
+}
+const COMPRESSED_COLOR = cssColor('--edge-compressed');
+const REST_COLOR       = cssColor('--edge-rest');
+const STRETCHED_COLOR  = cssColor('--edge-stretched');
 
 // --- Edge thickness by |strain|: REST_WIDTH at rest, MAX_WIDTH at full strain ---
 const REST_WIDTH = 1;
@@ -335,6 +360,8 @@ function tick(currentTime) {
     node.x += node.vx * dt;
     node.y += node.vy * dt;
   }
+  starAngle += settings.rotation * STAR_PARALLAX * dt;
+  starsGroup.setAttribute('transform', `rotate(${starAngle * 180 / Math.PI})`);
   render();
   requestAnimationFrame(tick);
 }

@@ -1,8 +1,9 @@
 /* Node styles: a node with `style: 'foo'` in data/nodes.js gets class `style-foo`
-   on its group, so rules can target `.style-foo .node` and `.style-foo .label`. */
-.style-index .node   { fill: #fca311; }
-.style-index .label  { font-weight: bold; }
+   on its group. Set --node-color on the group to colour the node and its glow
+   (palette colours are in style.css); `.style-foo .label` targets the label. */
+.style-index         { --node-color: var(--color-sun); }
+.style-index .label  { font-weight: 700; }
 
-.style-first .node   { fill: #6d2dd3; }
+.style-first  { --node-color: var(--color-violet); }
 
-.style-second .node { fill: #a5a5a5; }
+.style-second { --node-color: var(--color-cyan); }

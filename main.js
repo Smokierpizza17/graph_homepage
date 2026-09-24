@@ -24,6 +24,7 @@ const settings = Object.fromEntries(
 // --- Settings panel: one slider per entry in settingsConfig ---
 const settingsPanel = document.getElementById('settings');
 settingsPanel.open = false;
+const sliderControls = []; // { key, slider, output } per setting, used by the Reset! button
 for (const [key, cfg] of Object.entries(settingsConfig)) {
   const row = document.createElement('label');
   row.classList.add('setting');
@@ -49,6 +50,17 @@ for (const [key, cfg] of Object.entries(settingsConfig)) {
 
   row.append(name, output, slider);
   settingsPanel.appendChild(row);
+  sliderControls.push({ key, slider, output });
+}
+
+// Put every setting and its slider back to the default value
+function resetSettings() {
+  for (const { key, slider, output } of sliderControls) {
+    const value = settingsConfig[key].value;
+    settings[key] = value;
+    slider.value = value;
+    output.textContent = value;
+  }
 }
 
 // --- Centre the coordinate system: (0, 0) is the middle of the screen ---
@@ -80,7 +92,17 @@ const randomButton = document.createElement('button');
 randomButton.classList.add('settings-button');
 randomButton.textContent = 'Random!';
 randomButton.addEventListener('click', () => randomizePositions(nodes));
-settingsPanel.appendChild(randomButton);
+
+const resetButton = document.createElement('button');
+resetButton.classList.add('settings-button');
+resetButton.textContent = 'Reset!';
+resetButton.addEventListener('click', resetSettings);
+
+// Reset! and Random! side by side, half the width each
+const buttonRow = document.createElement('div');
+buttonRow.classList.add('settings-buttons');
+buttonRow.append(resetButton, randomButton);
+settingsPanel.appendChild(buttonRow);
 
 // --- Build a lookup so edges can find node positions by id ---
 const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));

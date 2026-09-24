@@ -97,7 +97,13 @@ a:not([href]) .node.dragging {
   accent-color: #4a90d9;
 }
 
+.settings-buttons {
+  display: flex;
+  gap: 6px;
+}
+
 .settings-button {
+  flex: 1;
   width: 100%;
   padding: 4px 0;
   background: #333;

@@ -1,9 +1,14 @@
 /* Node styles: a node with `style: 'foo'` in data/nodes.js gets class `style-foo`
    on its group. Set --node-color on the group to colour the node and its glow
-   (palette colours are in style.css); `.style-foo .label` targets the label. */
+   (palette colours are in css/theme.css); `.style-foo .label` targets the label. */
 .style-index         { --node-color: var(--color-sun); }
 .style-index .label  { font-weight: 700; }
 
 .style-first  { --node-color: var(--color-violet); }
 
 .style-second { --node-color: var(--color-cyan); }
+
+/* Edge styles: an edge with `style: 'foo'` in data/edges.js gets class `edge-foo`.
+   The stroke colour and width are set by the strain colouring in js/render.js;
+   opacity and dashes are free to change here, e.g.
+   .edge-foo { stroke-dasharray: 3 6; opacity: 0.6; } */

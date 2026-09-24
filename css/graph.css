@@ -1,0 +1,76 @@
+/* The graph: canvas, stars, edges, nodes and labels.
+   Per-node and per-edge styles live in data/customstyles.css. */
+
+#graph {
+  display: block;
+  touch-action: none; /* let touch drags move nodes instead of scrolling/zooming the page */
+  cursor: grab;       /* the background pans */
+}
+
+/* Background stars, generated in stars.js */
+.star {
+  fill: var(--star);
+}
+
+/* --- Edges --- */
+.edge {
+  stroke: var(--edge-rest); /* stroke and width are overridden inline by the strain colouring */
+  stroke-width: 1;
+  stroke-linecap: round;
+  fill: none; /* edges are paths; without this curved ones get filled in */
+  transition: filter var(--hover-fade) ease, opacity var(--hover-fade) ease; /* fade the highlight in and out */
+}
+
+/* Edges of the hovered or dragged node. The stroke is set inline, so brighten it
+   with a filter instead; currentColor is the same colour.
+   !important beats the opacity of edge styles like .edge-cross. */
+.edge.highlight {
+  opacity: 1 !important;
+  filter: brightness(2.2) drop-shadow(0 0 3px currentColor);
+}
+
+/* --- Nodes: styles set --node-color on the group; fill and glow both follow it ---
+   Hover and drag use filters rather than fill, so they work on any style's
+   colour and can't be overridden by the style rules. */
+.node {
+  fill: var(--node-color);
+  filter: drop-shadow(0 0 5px var(--node-color));
+  transition: filter var(--hover-fade) ease; /* fade hover and drag in and out */
+}
+
+/* Only on devices that can really hover; on touchscreens :hover sticks after a tap */
+@media (hover: hover) {
+  .node:hover {
+    filter: brightness(1.2) drop-shadow(0 0 12px var(--node-color));
+  }
+}
+
+.node.dragging {
+  filter: brightness(1.4) drop-shadow(0 0 16px var(--node-color));
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+/* --- Cursors: linked nodes are clickable, the rest can only be dragged --- */
+.node                           { cursor: pointer; }
+a:not([href]) .node             { cursor: grab; }
+.node.dragging,
+a:not([href]) .node.dragging,
+#graph.panning,
+#graph.panning .node            { cursor: grabbing; }
+
+/* --- Node labels --- */
+.label {
+  fill: var(--label);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  /* dark outline behind the text keeps it readable over edges and busy backgrounds */
+  paint-order: stroke;
+  stroke: var(--label-outline);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none; /* let mouse events pass through to the node */
+  user-select: none;
+}

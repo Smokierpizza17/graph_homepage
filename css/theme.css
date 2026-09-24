@@ -1,0 +1,46 @@
+/* Palette and page basics: every colour in the page comes from here. render.js
+   reads the --edge-* colours too, so the strain colouring follows the theme. */
+:root {
+  --bg-inner:        #141a2e;
+  --bg-mid:          #0a0d18;
+  --bg-outer:        #05060b;
+  --star:            #e8ecff;
+
+  --color-sun:       #f6b94a;
+  --color-violet:    #9d8cf5;
+  --color-cyan:      #5ccfe6;
+  --color-green:     #a8e08a;
+  --color-silver:    #cfd5e0;
+
+  --node-color:      var(--color-cyan); /* default; node styles override it */
+
+  --label:           #c3cbe0;
+  --label-outline:   rgba(5, 6, 11, 0.7);
+
+  --edge-rest:       #2e3858;
+  --edge-compressed: #5ccfe6;
+  --edge-stretched:  #f28b82;
+
+  --panel-bg:        rgba(14, 18, 34, 0.6);
+  --panel-border:    rgba(157, 140, 245, 0.2);
+  --panel-text:      #c3cbe0;
+  --panel-muted:     #7a84a3;
+  --button-bg:       rgba(157, 140, 245, 0.12);
+  --button-bg-hover: rgba(157, 140, 245, 0.22);
+
+  --font: 'Space Grotesk', system-ui, sans-serif;
+
+  --hover-fade:      0.15s; /* how long node and edge highlights take to fade in and out */
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: radial-gradient(ellipse at center, var(--bg-inner) 0%, var(--bg-mid) 60%, var(--bg-outer) 100%);
+  background-color: var(--bg-outer);
+}

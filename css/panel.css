@@ -1,0 +1,104 @@
+/* Settings panel, built by panel.js */
+
+#settings {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: 200px;
+  padding: 10px 12px;
+  background: var(--panel-bg);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--panel-text);
+}
+
+#settings summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+#settings[open] summary {
+  margin-bottom: 8px;
+}
+
+.setting {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  row-gap: 2px;
+  margin-bottom: 8px;
+}
+
+.setting-value {
+  color: var(--panel-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.setting input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--color-violet);
+}
+
+/* Reset! and Random! side by side, half the width each */
+.settings-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-button {
+  flex: 1;
+  padding: 4px 0;
+  background: var(--button-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  color: var(--panel-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .settings-button:hover {
+    background: var(--button-bg-hover);
+  }
+}
+
+/* Touchscreens: bigger targets for fingers */
+@media (pointer: coarse) {
+  #settings {
+    font-size: 14px;
+  }
+
+  #settings summary {
+    padding: 4px 0;
+  }
+
+  .setting input[type="range"] {
+    height: 28px;
+  }
+
+  .settings-button {
+    padding: 10px 0;
+  }
+}
+
+/* Narrow screens: a small button when closed, full width across the top when open */
+@media (max-width: 480px) {
+  #settings {
+    top: 8px;
+    right: 8px;
+    width: auto;
+    max-height: calc(100% - 16px);
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  #settings[open] {
+    left: 8px;
+  }
+}

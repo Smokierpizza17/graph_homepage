@@ -9,9 +9,9 @@ const NS = 'http://www.w3.org/2000/svg';
 const settingsConfig = {
   centering:    { label: 'Centering',     value: 0.05,    min: 0.005,  max: 0.2,   step: 0.005  },
   rotation:     { label: 'Rotation',      value: 0.0005,  min: -0.01,  max: 0.01,  step: 0.0005 },
-  repulsion:    { label: 'Repulsion',     value: 10000,   min: 0,      max: 50000, step: 500     },
+  repulsion:    { label: 'Repulsion',     value: 7000,    min: 0,      max: 50000, step: 500     },
   linkStrength: { label: 'Link strength', value: 0.05,    min: 0.002,  max: 0.3,   step: 0.002   },
-  linkLength:   { label: 'Link length',   value: 100,     min: 10,     max: 400,   step: 5       },
+  linkLength:   { label: 'Link length',   value: 130,     min: 10,     max: 400,   step: 5       },
   damping:      { label: 'Damping',       value: 0.25,    min: 0.01,   max: 1,     step: 0.01    },
   speed:        { label: 'Speed',         value: 50,      min: 1,      max: 100,   step: 1       },
   temperature:  { label: 'Temperature',   value: 0,       min: 0,      max: 20,    step: 0.05    },

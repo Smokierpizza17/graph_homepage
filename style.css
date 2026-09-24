@@ -43,6 +43,12 @@ body {
 #graph {
   display: block;
   touch-action: none; /* let touch drags move nodes instead of scrolling/zooming the page */
+  cursor: grab;       /* the background pans */
+}
+
+#graph.panning,
+#graph.panning .node {
+  cursor: grabbing;
 }
 
 /* Background stars, generated in main.js */

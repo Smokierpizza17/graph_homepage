@@ -1,6 +1,7 @@
 const svg = document.getElementById('graph');
 const edgesGroup = document.getElementById('edges');
 const nodesGroup = document.getElementById('nodes');
+const viewportGroup = document.getElementById('viewport');
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -74,23 +75,62 @@ updateViewBox();
 window.addEventListener('resize', updateViewBox);
 
 // --- Background stars: faint dots that turn slowly with the rotation setting ---
-// Scattered over a disc covering the whole screen, so rotating never shows a gap.
+// They follow pan and zoom at a fraction of the graph's movement (parallax), so they
+// feel far away. The stars fill one square tile, repeated 3x3; panning shifts the
+// tiles by the offset modulo the tile size, so the field never runs out.
 const starsGroup = document.getElementById('stars');
-const STAR_COUNT = 150;
-const STAR_PARALLAX = 0.2; // stars turn at this fraction of the graph's rotation
-let starAngle = 0;         // radians
+const STAR_COUNT = 380;              // stars per tile
+const STAR_PARALLAX = 0.2;           // stars turn at this fraction of the graph's rotation
+const STAR_PAN_PARALLAX = 0.2;       // ...move at this fraction of the pan
+const STAR_ZOOM_PARALLAX = 0.3;      // ...and zoom by the graph's zoom to this power
+let starAngle = 0;                   // radians
 
-const starRadius = Math.hypot(screen.width, screen.height) / 2;
+// One screen diagonal per tile: the 3x3 block then covers the screen at any rotation,
+// down to a star zoom of 0.5 (the graph's minimum zoom 0.2 gives 0.2^0.3 ≈ 0.62)
+const STAR_TILE = Math.hypot(screen.width, screen.height);
+
+const starTiles = document.createElementNS(NS, 'g');
+const starTile = document.createElementNS(NS, 'g');
+starTile.id = 'star-tile';
 for (let i = 0; i < STAR_COUNT; i++) {
-  const r = starRadius * Math.sqrt(Math.random()); // sqrt gives uniform density over the disc
-  const angle = Math.random() * 2 * Math.PI;
   const star = document.createElementNS(NS, 'circle');
   star.classList.add('star');
-  star.setAttribute('cx', r * Math.cos(angle));
-  star.setAttribute('cy', r * Math.sin(angle));
+  star.setAttribute('cx', (Math.random() - 0.5) * STAR_TILE);
+  star.setAttribute('cy', (Math.random() - 0.5) * STAR_TILE);
   star.setAttribute('r', 0.4 + Math.random());
-  star.setAttribute('opacity', 0.1 + Math.random() * 0.3);
-  starsGroup.appendChild(star);
+  star.setAttribute('opacity', 0.2 + Math.random() * 0.3);
+  starTile.appendChild(star);
+}
+starTiles.appendChild(starTile);
+for (let i = -1; i <= 1; i++) {
+  for (let j = -1; j <= 1; j++) {
+    if (i === 0 && j === 0) continue;
+    const copy = document.createElementNS(NS, 'use');
+    copy.setAttribute('href', '#star-tile');
+    copy.setAttribute('x', i * STAR_TILE);
+    copy.setAttribute('y', j * STAR_TILE);
+    starTiles.appendChild(copy);
+  }
+}
+starsGroup.appendChild(starTiles);
+
+// Wrap v into [-STAR_TILE / 2, STAR_TILE / 2)
+function wrapStar(v) {
+  return ((v + STAR_TILE / 2) % STAR_TILE + STAR_TILE) % STAR_TILE - STAR_TILE / 2;
+}
+
+// Place the star field for the current rotation, pan and zoom (view is defined below)
+function updateStars() {
+  const k = view.k ** STAR_ZOOM_PARALLAX;
+  // The screen shift we want, turned back into the rotated, scaled star space
+  const dx = view.x * STAR_PAN_PARALLAX / k;
+  const dy = view.y * STAR_PAN_PARALLAX / k;
+  const cos = Math.cos(starAngle);
+  const sin = Math.sin(starAngle);
+  const tx = wrapStar( cos * dx + sin * dy);
+  const ty = wrapStar(-sin * dx + cos * dy);
+  starsGroup.setAttribute('transform', `rotate(${starAngle * 180 / Math.PI}) scale(${k})`);
+  starTiles.setAttribute('transform', `translate(${tx}, ${ty})`);
 }
 
 // --- Graph data, loaded from data/nodes.js and data/edges.js ---
@@ -124,6 +164,13 @@ buttonRow.classList.add('settings-buttons');
 buttonRow.append(resetButton, randomButton);
 settingsPanel.appendChild(buttonRow);
 
+// The settings never take focus, so Tab skips them and keyboard shortcuts
+// (Space, H) keep working after touching a slider or button.
+for (const el of settingsPanel.querySelectorAll('summary, input, button')) {
+  el.setAttribute('tabindex', '-1');
+}
+settingsPanel.addEventListener('focusin', (evt) => evt.target.blur());
+
 // --- Build a lookup so edges can find node positions by id ---
 const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
 
@@ -150,6 +197,7 @@ const edgeElements = edges.map(edge => {
 const nodeElements = nodes.map(node => {
   const g = document.createElementNS(NS, 'a');
   if (node.link) g.setAttribute('href', node.link); // without href it's just a draggable node
+  g.setAttribute('tabindex', '-1'); // keep Tab from cycling through the nodes
   if (node.style) g.classList.add(`style-${node.style}`);
 
   const circle = document.createElementNS(NS, 'circle');
@@ -232,11 +280,12 @@ let didDrag = false;  // true once the pointer moved far enough to count as a dr
 
 const DRAG_THRESHOLD = 4; // pixels of movement before a press becomes a drag
 
+// Screen position -> graph coordinates, taking the current pan and zoom into account
 function toSVGCoords(evt) {
   const pt = svg.createSVGPoint();
   pt.x = evt.clientX;
   pt.y = evt.clientY;
-  return pt.matrixTransform(svg.getScreenCTM().inverse());
+  return pt.matrixTransform(viewportGroup.getScreenCTM().inverse());
 }
 
 nodeElements.forEach(({ node, g, circle }) => {
@@ -281,6 +330,216 @@ function endDrag(evt) {
 }
 window.addEventListener('pointerup', endDrag);
 window.addEventListener('pointercancel', endDrag); // e.g. the browser took over the touch
+
+// --- Pan and zoom ---
+// The view is a translate + scale on the #viewport group. Pan with a left drag
+// on the background, a middle drag anywhere, or one finger on the background;
+// zoom with the wheel (or trackpad pinch) or a two-finger pinch.
+// Double click / double tap, Space or H put the view back.
+
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 5;
+const WHEEL_ZOOM_SPEED = 0.0015;  // zoom factor per wheel pixel
+const WHEEL_ZOOM_SMOOTHING = 80;  // ms time constant for easing towards the wheel's target zoom
+const DOUBLE_TAP_TIME = 300;      // ms between taps to count as a double tap
+const DOUBLE_TAP_DISTANCE = 30;   // px the second tap may land from the first
+const RESET_DURATION = 300;       // ms for the reset animation
+
+const view = { x: 0, y: 0, k: 1 }; // pan offset in screen pixels, zoom factor
+let resetAnimation = null;        // requestAnimationFrame id while resetting
+let zoomAnimation = null;         // requestAnimationFrame id while easing a wheel zoom
+let zoomTarget = null;            // { k, s }: zoom to ease towards, and the screen point to keep fixed
+
+function clampZoom(k) {
+  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, k));
+}
+
+function applyView() {
+  viewportGroup.setAttribute('transform', `translate(${view.x}, ${view.y}) scale(${view.k})`);
+}
+
+// Screen position relative to the centre of the SVG, i.e. in the viewBox's units
+function screenPoint(evt) {
+  const rect = svg.getBoundingClientRect();
+  return { x: evt.clientX - rect.left - rect.width / 2, y: evt.clientY - rect.top - rect.height / 2 };
+}
+
+// Screen point -> graph point under it
+function graphPoint(s) {
+  return { x: (s.x - view.x) / view.k, y: (s.y - view.y) / view.k };
+}
+
+// Stop any reset or wheel-zoom easing, e.g. because the user grabbed the view
+function stopViewAnimation() {
+  if (resetAnimation !== null) cancelAnimationFrame(resetAnimation);
+  if (zoomAnimation !== null) cancelAnimationFrame(zoomAnimation);
+  resetAnimation = null;
+  zoomAnimation = null;
+  zoomTarget = null;
+}
+
+// Ease back to no pan, zoom 1
+function resetView() {
+  stopViewAnimation();
+  const from = { ...view };
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min((now - start) / RESET_DURATION, 1);
+    const ease = 1 - (1 - t) ** 3; // ease-out cubic
+    view.x = from.x * (1 - ease);
+    view.y = from.y * (1 - ease);
+    view.k = from.k + (1 - from.k) * ease;
+    applyView();
+    resetAnimation = t < 1 ? requestAnimationFrame(step) : null;
+  }
+  resetAnimation = requestAnimationFrame(step);
+}
+
+// Pointers currently panning, by pointerId -> latest screen point.
+// With one pointer the graph point under it stays under it; with two or more the
+// graph point under their centroid does, and their spread sets the zoom.
+const panPointers = new Map();
+let panAnchor = null;   // graph point pinned under the centroid
+let panBaseSpread = 0;  // pointer spread when the anchor was set
+let panBaseZoom = 1;    // zoom when the anchor was set
+let panStart = null;    // first pointer's start, to tell a pan from a click
+let didPan = false;
+
+function panCentroid() {
+  let x = 0, y = 0;
+  for (const p of panPointers.values()) { x += p.x; y += p.y; }
+  return { x: x / panPointers.size, y: y / panPointers.size };
+}
+
+function panSpread(c) {
+  let sum = 0;
+  for (const p of panPointers.values()) sum += Math.hypot(p.x - c.x, p.y - c.y);
+  return sum / panPointers.size;
+}
+
+// Re-pin whenever a finger is added or lifted, so the view doesn't jump
+function resetPanAnchor() {
+  if (panPointers.size === 0) { panAnchor = null; return; }
+  const c = panCentroid();
+  panAnchor = graphPoint(c);
+  panBaseSpread = panSpread(c);
+  panBaseZoom = view.k;
+}
+
+svg.addEventListener('pointerdown', (evt) => {
+  const onNode = evt.target.classList.contains('node');
+  const isMiddle = evt.pointerType === 'mouse' && evt.button === 1;
+  if (!isMiddle && (evt.button !== 0 || onNode)) return; // left presses on nodes are node drags
+  evt.preventDefault(); // no middle-click autoscroll, no text selection
+  stopViewAnimation();
+  if (panPointers.size === 0) {
+    panStart = { x: evt.clientX, y: evt.clientY };
+    didPan = false;
+  }
+  panPointers.set(evt.pointerId, screenPoint(evt));
+  resetPanAnchor();
+  svg.classList.add('panning');
+});
+
+window.addEventListener('pointermove', (evt) => {
+  if (!panPointers.has(evt.pointerId)) return;
+  if (!didPan) {
+    if (Math.hypot(evt.clientX - panStart.x, evt.clientY - panStart.y) < DRAG_THRESHOLD) return;
+    didPan = true;
+  }
+  panPointers.set(evt.pointerId, screenPoint(evt));
+  const c = panCentroid();
+  if (panPointers.size > 1 && panBaseSpread > 0) {
+    view.k = clampZoom(panBaseZoom * panSpread(c) / panBaseSpread);
+  }
+  view.x = c.x - panAnchor.x * view.k;
+  view.y = c.y - panAnchor.y * view.k;
+  applyView();
+});
+
+function endPan(evt) {
+  if (!panPointers.delete(evt.pointerId)) return;
+  resetPanAnchor();
+  if (panPointers.size === 0) svg.classList.remove('panning');
+}
+window.addEventListener('pointerup', endPan);
+window.addEventListener('pointercancel', endPan);
+
+// A middle-drag that started on a link shouldn't also open it in a new tab
+svg.addEventListener('auxclick', (evt) => {
+  if (didPan) evt.preventDefault();
+});
+
+// Wheel zooms around the cursor. Trackpad pinch arrives as a wheel event with ctrlKey.
+// Each wheel event moves a target zoom; the view eases towards it every frame,
+// keeping the graph point under the cursor fixed, so mouse wheel notches don't jump.
+let lastZoomFrame = 0;
+
+function zoomStep(now) {
+  const dt = Math.min(now - lastZoomFrame, 50);
+  lastZoomFrame = now;
+  const { k: targetK, s } = zoomTarget;
+  const g = graphPoint(s);
+  // Ease in log space so zooming in and out feel the same
+  const ease = 1 - Math.exp(-dt / WHEEL_ZOOM_SMOOTHING);
+  const done = Math.abs(Math.log(targetK / view.k)) < 0.001;
+  view.k = done ? targetK : view.k * (targetK / view.k) ** ease;
+  view.x = s.x - g.x * view.k;
+  view.y = s.y - g.y * view.k;
+  applyView();
+  if (done) {
+    zoomAnimation = null;
+    zoomTarget = null;
+  } else {
+    zoomAnimation = requestAnimationFrame(zoomStep);
+  }
+}
+
+svg.addEventListener('wheel', (evt) => {
+  evt.preventDefault();
+  if (resetAnimation !== null) stopViewAnimation();
+  const pixels = evt.deltaMode === 1 ? evt.deltaY * 16 : evt.deltaY; // lines -> pixels
+  const fromK = zoomTarget ? zoomTarget.k : view.k;
+  zoomTarget = {
+    k: clampZoom(fromK * Math.exp(-pixels * WHEEL_ZOOM_SPEED * (evt.ctrlKey ? 5 : 1))),
+    s: screenPoint(evt),
+  };
+  if (zoomAnimation === null) {
+    lastZoomFrame = performance.now();
+    zoomAnimation = requestAnimationFrame(zoomStep);
+  }
+}, { passive: false });
+
+// Double click / double tap anywhere resets the view. Detected by hand rather than
+// with dblclick, which mobile browsers don't fire reliably.
+let tapStart = null;
+let lastTap = null; // { time, x, y } of the previous tap
+svg.addEventListener('pointerdown', (evt) => {
+  if (evt.isPrimary && evt.button === 0) tapStart = { x: evt.clientX, y: evt.clientY };
+});
+window.addEventListener('pointerup', (evt) => {
+  if (!evt.isPrimary || !tapStart) return;
+  const moved = Math.hypot(evt.clientX - tapStart.x, evt.clientY - tapStart.y);
+  tapStart = null;
+  if (moved >= DRAG_THRESHOLD) { lastTap = null; return; }
+  const now = performance.now();
+  if (lastTap && now - lastTap.time < DOUBLE_TAP_TIME &&
+      Math.hypot(evt.clientX - lastTap.x, evt.clientY - lastTap.y) < DOUBLE_TAP_DISTANCE) {
+    resetView();
+    lastTap = null;
+  } else {
+    lastTap = { time: now, x: evt.clientX, y: evt.clientY };
+  }
+});
+
+// Space or H resets the view
+window.addEventListener('keydown', (evt) => {
+  if (evt.ctrlKey || evt.metaKey || evt.altKey) return;
+  if (evt.key === ' ' || evt.key === 'h' || evt.key === 'H') {
+    evt.preventDefault();
+    resetView();
+  }
+});
 
 // Standard normal sample (mean 0, std 1)
 function randn() {
@@ -361,7 +620,7 @@ function tick(currentTime) {
     node.y += node.vy * dt;
   }
   starAngle += settings.rotation * STAR_PARALLAX * dt;
-  starsGroup.setAttribute('transform', `rotate(${starAngle * 180 / Math.PI})`);
+  updateStars();
   render();
   requestAnimationFrame(tick);
 }

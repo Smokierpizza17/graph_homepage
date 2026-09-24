@@ -60,14 +60,25 @@ updateViewBox();
 window.addEventListener('resize', updateViewBox);
 
 // --- Graph data, loaded from data/nodes.js and data/edges.js ---
-// Nodes start scattered around the centre; the simulation spreads them out.
-const nodes = NODES.map(({ id, name, link, style }) => ({
-  id, name, link, style,
-  x: (Math.random() - 0.5) * svg.clientWidth,
-  y: (Math.random() - 0.5) * svg.clientHeight,
-  vx: 0,
-  vy: 0,
-}));
+const nodes = NODES.map(({ id, name, link, style }) => ({ id, name, link, style }));
+
+// Scatter nodes randomly across the screen and stop them moving;
+// the simulation then pulls them back into shape.
+function randomizePositions(nodes) {
+  for (const node of nodes) {
+    node.x = (Math.random() - 0.5) * svg.clientWidth;
+    node.y = (Math.random() - 0.5) * svg.clientHeight;
+    node.vx = 0;
+    node.vy = 0;
+  }
+}
+randomizePositions(nodes);
+
+const randomButton = document.createElement('button');
+randomButton.classList.add('settings-button');
+randomButton.textContent = 'Random!';
+randomButton.addEventListener('click', () => randomizePositions(nodes));
+settingsPanel.appendChild(randomButton);
 
 // --- Build a lookup so edges can find node positions by id ---
 const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));

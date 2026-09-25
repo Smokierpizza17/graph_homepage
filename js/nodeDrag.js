@@ -24,7 +24,7 @@ function updateEdgeHighlight() {
   highlightEdgesOf(drag.node || hoveredNode);
 }
 
-for (const { node, g, circle } of nodeElements) {
+for (const { node, g, circle, hint } of nodeElements) {
   circle.addEventListener('pointerdown', (evt) => {
     if (evt.button !== 0) return; // leave middle-click etc. to the browser
     if (drag.node) return;        // already dragging with another finger
@@ -44,15 +44,22 @@ for (const { node, g, circle } of nodeElements) {
         drag.peekTimer = null;
         drag.peeked = true;
         g.classList.add('peek');
+        scrambleHint(hint);
       }, PEEK_HOLD_TIME);
     }
   });
 
-  // Mouse and pen only: on touchscreens the drag highlight covers it
+  // Mouse and pen only: on touchscreens the drag highlight covers it.
+  // Also skip this while any node is being dragged: the dragged circle trails
+  // one pointermove behind the cursor (it only catches up once render() runs),
+  // so a fast drag can outrun its own radius and fire spurious enter/leave
+  // pairs here, each of which would restart the hint's scramble-in animation.
   circle.addEventListener('pointerenter', (evt) => {
     if (evt.pointerType === 'touch') return;
+    if (drag.node) return;
     hoveredNode = node;
     updateEdgeHighlight();
+    scrambleHint(hint);
   });
   circle.addEventListener('pointerleave', () => {
     if (hoveredNode !== node) return;

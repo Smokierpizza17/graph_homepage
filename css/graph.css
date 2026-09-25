@@ -95,9 +95,9 @@ a:not([href]) .node.dragging,
    devices, nodeDrag.js adds/removes the `peek` class instead, on a long
    press that isn't a drag; a normal tap still navigates immediately. --- */
 .link-hint {
-  fill: var(--panel-muted);
+  fill: var(--panel-link);
   font-family: var(--font);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.02em;
   paint-order: stroke;
   stroke: var(--label-outline);

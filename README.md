@@ -170,6 +170,7 @@ js/
   view.js             camera: pan, zoom and coordinates
   stars.js            background star field
   render.js           SVG elements, drawing and edge colouring
+  hintScramble.js     link hint text-scramble animation
   nodeDrag.js         dragging and hovering over nodes
   viewControls.js     mouse, touch and keyboard input for the camera
   panel.js            settings panel UI

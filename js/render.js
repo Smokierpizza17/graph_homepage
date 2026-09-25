@@ -29,10 +29,11 @@ const nodeElements = nodes.map(node => {
   const text = svgElement('text', { 'text-anchor': 'middle', dy: node.size * -LABEL_OFFSET }, 'label');
   text.textContent = node.name;
 
+  const hint = node.link && linkHint(node);
   g.append(circle, text);
-  if (node.link) g.append(linkHint(node));
+  if (hint) g.append(hint);
   document.getElementById('nodes').appendChild(g);
-  return { node, g, circle };
+  return { node, g, circle, hint };
 });
 
 // --- Node glow ---

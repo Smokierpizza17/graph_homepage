@@ -10,6 +10,8 @@
   --color-violet:    #9d8cf5;
   --color-cyan:      #5ccfe6;
   --color-green:     #a8e08a;
+  --color-ember:     #e2835f;
+  --color-rose:      #ec93c7;
   --color-silver:    #cfd5e0;
 
   --node-color:      var(--color-cyan); /* default; node styles override it */
@@ -24,6 +26,7 @@
   --panel-bg:        rgba(14, 18, 34, 0.6);
   --panel-border:    rgba(157, 140, 245, 0.2);
   --panel-text:      #c3cbe0;
+  --panel-link:      var(--color-green);
   --panel-muted:     #7a84a3;
   --button-bg:       rgba(157, 140, 245, 0.12);
   --button-bg-hover: rgba(157, 140, 245, 0.22);

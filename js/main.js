@@ -3,10 +3,12 @@
 let lastTime = 0;
 
 function tick(currentTime) {
-  const dt = settings.speed * Math.min((currentTime - lastTime) / 1000, 0.05); // seconds since last frame, scaled
+  const realDt = Math.min((currentTime - lastTime) / 1000, 0.05); // seconds since last frame, unscaled
+  const dt = settings.speed * realDt;
   lastTime = currentTime;
   step(dt);
   updateStars(dt);
+  updateHints(realDt); // a hover animation, not physics - shouldn't speed up/pause with the simulation
   render();
   requestAnimationFrame(tick);
 }

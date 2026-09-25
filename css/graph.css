@@ -88,5 +88,37 @@ a:not([href]) .node.dragging,
   stroke-width: 3px;
   stroke-linejoin: round;
   pointer-events: none; /* let mouse events pass through to the node */
-  user-select: none;
+}
+
+/* --- Link hint: a linked node's domain, shown below it on hover so a visitor
+   knows where a click leads without clicking first. On hover-less (touch)
+   devices, nodeDrag.js adds/removes the `peek` class instead, on a long
+   press that isn't a drag; a normal tap still navigates immediately. --- */
+.link-hint {
+  fill: var(--panel-muted);
+  font-family: var(--font);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  paint-order: stroke;
+  stroke: var(--label-outline);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--hover-fade) ease;
+}
+
+@media (hover: hover) {
+  a[href]:hover .link-hint {
+    opacity: 1;
+  }
+}
+
+a.peek .link-hint {
+  opacity: 1;
+  transition: none; /* show it the instant the hold is long enough, no fade */
+}
+
+a.peek .node {
+  filter: brightness(1.2) drop-shadow(0 0 12px var(--node-color));
 }

@@ -6,6 +6,12 @@
   right: 12px;
   width: 200px;
   padding: 10px 12px;
+  /* Without this, a pinch landing on the panel (rather than #graph, which already
+     opts out) triggers the browser's own zoom instead of ours - and since this is
+     `position: fixed`, that also visibly displaces it against the zoomed viewport.
+     `manipulation` (not `none`) so the panel can still scroll on narrow screens
+     (see the max-height/overflow-y rule below) and its sliders/buttons still work. */
+  touch-action: manipulation;
   background: var(--panel-bg);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -19,7 +25,6 @@
 
 #settings summary {
   cursor: pointer;
-  user-select: none;
 }
 
 #settings[open] summary {

@@ -38,6 +38,13 @@ html, body {
   padding: 0;
   height: 100%;
   overflow: hidden;
+  /* Nothing on this page is meant to be selected; set it once here (user-select is
+     inherited) rather than chasing individual elements - iOS in particular needs
+     both properties, since touch-callout (the long-press "Copy" menu) is separate
+     from user-select (the drag-to-highlight gesture) and neither implies the other. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 body {

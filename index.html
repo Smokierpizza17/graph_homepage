@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- maximum-scale/user-scalable: the page has its own pinch-to-zoom (viewControls.js);
+     without this, some browsers also zoom the whole page on top of it. iOS mostly
+     ignores this itself (see touch-action in css/panel.css and css/graph.css for
+     what actually stops it there), but it's a harmless backstop for others. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Graph View</title>
 <!-- The page is dark-only: tells the browser (scrollbars, form controls) and
      dark-mode extensions not to invert it. darkreader-lock is Dark Reader's opt-out. -->

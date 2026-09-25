@@ -12,6 +12,19 @@ const STAR_ZOOM_PARALLAX = 0.3;      // ...and zoom by the graph's zoom to this 
 // One screen diagonal per tile, so the repeat isn't noticeable
 const STAR_TILE = Math.hypot(screen.width, screen.height);
 
+// The canvas is only redrawn when it would actually look different (see lastStarDraw
+// below). At the default rotation, starAngle drifts by a tiny, sub-pixel amount every
+// single frame, which would otherwise force a full redraw of a Retina-resolution
+// canvas every frame for no visible change - expensive enough on mobile GPUs to drop
+// frames. Rounding to these precisions first means a redraw is skipped until the
+// change would actually be visible.
+const STAR_ANGLE_PRECISION = 0.001;  // rad
+const STAR_OFFSET_PRECISION = 0.25;  // px, in star space
+
+function roundTo(v, step) {
+  return Math.round(v / step) * step;
+}
+
 const starCanvas = document.getElementById('stars');
 const starContext = starCanvas.getContext('2d');
 let starAngle = 0;       // radians
@@ -80,7 +93,7 @@ function updateStars(dt) {
   const tx = wrapToTile( cos * dx + sin * dy);
   const ty = wrapToTile(-sin * dx + cos * dy);
 
-  const state = `${starAngle} ${k} ${tx} ${ty}`;
+  const state = `${roundTo(starAngle, STAR_ANGLE_PRECISION)} ${k} ${roundTo(tx, STAR_OFFSET_PRECISION)} ${roundTo(ty, STAR_OFFSET_PRECISION)}`;
   if (state === lastStarDraw) return;
   lastStarDraw = state;
 

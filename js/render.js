@@ -3,6 +3,20 @@
 
 const NODE_RADIUS = 18;   // at size 1
 const LABEL_OFFSET = 24;  // label height above the node's centre, at size 1
+const HINT_OFFSET = 14;   // hint's gap below the node's edge, at size 1
+
+// The linked node's domain, shown on hover so a visitor knows where a click
+// leads without having to click first (see the `link-hint` rule in graph.css;
+// touch has no hover, so this doesn't reach phones and tablets)
+function linkHint(node) {
+  const text = svgElement('text', { 'text-anchor': 'middle', dy: node.size * NODE_RADIUS + HINT_OFFSET }, 'link-hint');
+  try {
+    text.textContent = '>' + new URL(node.link).hostname.replace(/^www\./, '');
+  } catch {
+    text.textContent = '>' + node.link; // not a full URL (e.g. a relative path) - show it as-is
+  }
+  return text;
+}
 
 // --- Nodes: a <circle> + <text> pair, grouped in an <a> link ---
 // The node's style becomes a `style-<name>` class on the group, so CSS can
@@ -16,6 +30,7 @@ const nodeElements = nodes.map(node => {
   text.textContent = node.name;
 
   g.append(circle, text);
+  if (node.link) g.append(linkHint(node));
   document.getElementById('nodes').appendChild(g);
   return { node, g, circle };
 });

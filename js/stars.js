@@ -4,7 +4,7 @@
 // painted as a repeating pattern onto a <canvas> behind the SVG. Keeping them out of
 // the SVG means turning them doesn't force the whole graph to be repainted.
 
-const STAR_COUNT = 230;              // stars per tile
+const STAR_COUNT = 400;              // stars per tile
 const STAR_ROTATION_PARALLAX = 0.2;  // stars turn at this fraction of the graph's rotation
 const STAR_PAN_PARALLAX = 0.2;       // ...move at this fraction of the pan
 const STAR_ZOOM_PARALLAX = 0.3;      // ...and zoom by the graph's zoom to this power

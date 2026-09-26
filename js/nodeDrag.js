@@ -7,6 +7,10 @@
 // the same "check before you click" that :hover gives a mouse.
 const PEEK_HOLD_TIME = 350; // ms
 
+// Duration that samples should cover in order to be able to derive average speed 
+// towards the end of the drag, for release velocity
+const SAMPLEWINDOW = 100;  // ms
+
 const drag = {
   node: null,       // node being dragged
   g: null,          // ...and its <a> group, so a peek's `peek` class can be removed again
@@ -16,6 +20,7 @@ const drag = {
   moved: false,     // true once the pointer moved far enough to count as a drag
   peekTimer: null,  // setTimeout id for the long-press peek, while it's still pending
   peeked: false,    // true once the peek has shown; the following click shouldn't navigate
+  samples: [],      // position samples later used for release velocity
 };
 let hoveredNode = null;
 
@@ -90,6 +95,10 @@ window.addEventListener('pointermove', (evt) => {
   const { x, y } = graphPoint(screenPoint(evt));
   drag.node.x = x;
   drag.node.y = y;
+  drag.samples.push({x, y, t: evt.timeStamp});
+  while(drag.samples.length > 1 && evt.timeStamp - drag.samples[0].t > SAMPLEWINDOW) {
+    drag.samples.shift();
+  }
   render();
 });
 
@@ -98,6 +107,16 @@ function endDrag(evt) {
   if (drag.peekTimer !== null) clearTimeout(drag.peekTimer);
   drag.g.classList.remove('peek'); // hide the hint again once the finger lifts
   drag.node.fixed = false;
+
+  // calculate release velocity
+  const oldest = drag.samples[0];
+  const newest = drag.samples[drag.samples.length - 1];
+  const deltat = (newest.t - oldest.t) / 1000; // s
+  if (deltat > 0) {
+    drag.node.vx = (newest.x - oldest.x) / deltat / settings.speed;
+    drag.node.vy = (newest.y - oldest.y) / deltat / settings.speed;
+  }
+
   drag.circle.classList.remove('dragging');
   drag.node = drag.g = drag.circle = drag.pointerId = drag.peekTimer = null; // drag.moved/peeked stay set for the click that follows
   updateEdgeHighlight();
